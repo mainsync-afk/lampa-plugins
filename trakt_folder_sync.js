@@ -324,11 +324,25 @@
     // ----- Инициализация ----------------------------------------------------
 
     function init() {
-        // Перехват событий избранного
-        Lampa.Listener.follow('favorite', function (e) {
-            if (_suppressFavoriteEvent) return;
-            onFavoriteEvent(e);
-        });
+        // Monkey-patch Lampa.Favorite.add / remove
+        var _origAdd    = Lampa.Favorite.add.bind(Lampa.Favorite);
+        var _origRemove = Lampa.Favorite.remove.bind(Lampa.Favorite);
+
+        Lampa.Favorite.add = function (type, card) {
+            var result = _origAdd(type, card);
+            if (!_suppressFavoriteEvent && (type === 'book' || type === 'thrown')) {
+                onFavoriteEvent({ type: 'add', name: type, card: card });
+            }
+            return result;
+        };
+
+        Lampa.Favorite.remove = function (type, card) {
+            var result = _origRemove(type, card);
+            if (!_suppressFavoriteEvent && (type === 'book' || type === 'thrown')) {
+                onFavoriteEvent({ type: 'remove', name: type, card: card });
+            }
+            return result;
+        };
 
         // Перехват открытия папки
         hookFavoriteOpen();
